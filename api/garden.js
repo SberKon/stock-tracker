@@ -23,17 +23,20 @@ app.get("/api/garden", async (req, res) => {
     const $ = cheerio.load(response.data);
     const stockData = [];
     
-    // Find all stock sections (similar to gardenscraper.py)
-    const stockSections = $('.grid-cols-1').first().children('div');
-    
-    stockSections.each((_, section) => {
+    // Find all stock sections based on the new structure
+    $('.grid-cols-1.md\\:grid-cols-3 > div').each((_, section) => {
       const title = $(section).find('h2').text().trim();
       const items = [];
       
       $(section).find('li').each((_, item) => {
         const name = $(item).find('span').first().text().split('x')[0].trim();
         const quantity = $(item).find('span.text-gray-400').text().trim();
-        items.push({ name, quantity });
+        const imageUrl = $(item).find('img').attr('src');
+        items.push({ 
+          name, 
+          quantity,
+          image: imageUrl
+        });
       });
       
       stockData.push({
