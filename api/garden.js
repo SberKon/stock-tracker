@@ -29,24 +29,23 @@ app.get("/api/garden", async (req, res) => {
     const $ = cheerio.load(response.data);
     const stockData = [];
     
-    // Find the main grid container and its direct children
-    const mainGrid = $('.grid.grid-cols-1.md\\:grid-cols-3.gap-6');
-    
-    mainGrid.children('div').each((_, section) => {
+    // Find the main grid container using the exact class names
+    $('.grid.grid-cols-1.md\\:grid-cols-3.gap-6.px-6').children('div').each((_, section) => {
       const title = $(section).find('h2').text().trim();
       const items = [];
       
-      $(section).find('ul > li').each((_, item) => {
+      $(section).find('.space-y-2 > li').each((_, item) => {
         const itemElement = $(item);
-        const nameWithQuantity = itemElement.find('span').first().text().trim();
-        const name = nameWithQuantity.split('x')[0].trim();
+        const spanElement = itemElement.find('span').first();
+        const fullText = spanElement.clone().children().remove().end().text().trim();
+        const name = fullText.trim();
         const quantity = itemElement.find('span.text-gray-400').text().trim();
         const imageUrl = itemElement.find('img').attr('src') || '';
         
         if (name) {
           items.push({ 
             name, 
-            quantity: quantity || 'x0',
+            quantity,
             image: imageUrl
           });
         }
@@ -59,6 +58,8 @@ app.get("/api/garden", async (req, res) => {
         });
       }
     });
+
+    console.log('Scraped Data:', stockData); // Debug logging
 
     if (stockData.length === 0) {
       throw new Error('No stock data found');
