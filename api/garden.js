@@ -16,34 +16,53 @@ app.get("/api/garden", async (req, res) => {
     const url = "https://www.vulcanvalues.com/grow-a-garden/stock";
     const response = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      }
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Cache-Control': 'max-age=0'
+      },
+      timeout: 10000
     });
     
     const $ = cheerio.load(response.data);
     const stockData = [];
     
-    // Find all stock sections based on the new structure
-    $('.grid-cols-1.md\\:grid-cols-3 > div').each((_, section) => {
+    // Find the main grid container and its direct children
+    const mainGrid = $('.grid.grid-cols-1.md\\:grid-cols-3.gap-6');
+    
+    mainGrid.children('div').each((_, section) => {
       const title = $(section).find('h2').text().trim();
       const items = [];
       
-      $(section).find('li').each((_, item) => {
-        const name = $(item).find('span').first().text().split('x')[0].trim();
-        const quantity = $(item).find('span.text-gray-400').text().trim();
-        const imageUrl = $(item).find('img').attr('src');
-        items.push({ 
-          name, 
-          quantity,
-          image: imageUrl
-        });
+      $(section).find('ul > li').each((_, item) => {
+        const itemElement = $(item);
+        const nameWithQuantity = itemElement.find('span').first().text().trim();
+        const name = nameWithQuantity.split('x')[0].trim();
+        const quantity = itemElement.find('span.text-gray-400').text().trim();
+        const imageUrl = itemElement.find('img').attr('src') || '';
+        
+        if (name) {
+          items.push({ 
+            name, 
+            quantity: quantity || 'x0',
+            image: imageUrl
+          });
+        }
       });
       
-      stockData.push({
-        section: title,
-        items: items
-      });
+      if (title) {
+        stockData.push({
+          section: title,
+          items: items
+        });
+      }
     });
+
+    if (stockData.length === 0) {
+      throw new Error('No stock data found');
+    }
     
     res.json({
       data: stockData,
